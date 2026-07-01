@@ -1,0 +1,1 @@
+const APP_CONFIG={supabaseUrl:"",supabaseAnonKey:"",bossPassword:"emily888",companyName:"Warrnambool Trays & Trailers"};

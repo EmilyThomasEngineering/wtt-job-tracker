@@ -1,0 +1,1 @@
+const s=document.getElementById('status');document.getElementById('bossButton').onclick=()=>s.textContent='Boss View will be built next.';document.getElementById('staffButton').onclick=()=>s.textContent='Staff View will be built next.';
