@@ -1,1 +1,18 @@
-const s=document.getElementById('status');document.getElementById('bossButton').onclick=()=>s.textContent='Boss View will be built next.';document.getElementById('staffButton').onclick=()=>s.textContent='Staff View will be built next.';
+const statusPanel = document.getElementById("statusPanel");
+const connectionStatus = document.getElementById("connectionStatus");
+
+document.getElementById("bossButton").addEventListener("click", () => {
+  statusPanel.textContent = "Boss login is the next feature. Tiny empire, sensible gatekeeping.";
+});
+
+document.getElementById("staffButton").addEventListener("click", () => {
+  statusPanel.textContent = "Staff selector is coming next.";
+});
+
+if (APP_CONFIG.supabaseUrl && APP_CONFIG.supabaseAnonKey) {
+  connectionStatus.textContent = "Supabase configured";
+} else {
+  connectionStatus.textContent = "Local setup";
+}
+
+console.log("Warrnambool Trays & Trailers Job Tracker loaded.");

@@ -1,1 +1,1 @@
--- SQL setup coming next.
+-- Database setup will be added when Supabase schema is designed.
