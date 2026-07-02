@@ -1,4 +1,3 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +11,10 @@
     <header class="app-header">
       <a class="mini-brand" href="../index.html">
         <img src="../assets/logos/wtt-logo.png" alt="WTT logo" />
-        <div><strong>Boss View</strong><span>Warrnambool Trays & Trailers</span></div>
+        <div>
+          <strong>Boss View</strong>
+          <span>Warrnambool Trays & Trailers</span>
+        </div>
       </a>
       <div class="button-row">
         <a class="ghost-button" href="../index.html">Back</a>
@@ -36,34 +38,126 @@
         <button class="tab-button" data-tab="live">Live View</button>
         <button class="tab-button" data-tab="summary">Summary</button>
         <button class="tab-button" data-tab="templates">Templates</button>
+        <button class="tab-button" data-tab="settings">Settings</button>
       </nav>
 
       <section class="tab-panel active" id="tab-plan">
-        <div class="section-header"><div><p class="section-label">Job planner</p><h2>Plan selected day</h2></div><input id="planDate" type="date" /></div>
-        <div class="card"><h3>Create job</h3><div class="form-grid"><label>Staff<select id="planStaff"></select></label><label>Job number<input id="planJobNumber" type="number" min="1" value="1" /></label><label>Job / template search<input id="planJobName" list="jobTemplateList" placeholder="Start typing a job..." /><datalist id="jobTemplateList"></datalist></label><label>Specific instructions<input id="planInstructions" placeholder="Optional instructions" /></label></div><button id="addJobButton" class="primary-button">Add job</button></div>
+        <div class="section-header">
+          <div>
+            <p class="section-label">Job planner</p>
+            <h2>Plan selected day</h2>
+          </div>
+          <input id="planDate" type="date" />
+        </div>
+
+        <div class="card">
+          <h3>Create job</h3>
+          <div class="form-grid">
+            <label>Staff
+              <select id="planStaff"></select>
+            </label>
+            <label>Job number
+              <input id="planJobNumber" type="number" min="1" value="1" />
+            </label>
+            <label>Job / template search
+              <input id="planJobName" list="jobTemplateList" placeholder="Start typing a job..." />
+              <datalist id="jobTemplateList"></datalist>
+            </label>
+            <label>Specific instructions
+              <input id="planInstructions" placeholder="Optional instructions" />
+            </label>
+          </div>
+          <button id="addJobButton" class="primary-button">Add job</button>
+        </div>
+
         <div id="planTable" class="stack"></div>
       </section>
 
       <section class="tab-panel" id="tab-live">
-        <div class="section-header"><div><p class="section-label">Live view</p><h2>Workshop dashboard</h2></div><input id="liveDate" type="date" /></div>
-        <div id="liveStats" class="stats-grid"></div><div id="liveCards" class="stack"></div>
+        <div class="section-header">
+          <div>
+            <p class="section-label">Live view</p>
+            <h2>Workshop dashboard</h2>
+          </div>
+          <input id="liveDate" type="date" />
+        </div>
+        <div id="liveStats" class="stats-grid"></div>
+        <div id="liveCards" class="stack"></div>
       </section>
 
       <section class="tab-panel" id="tab-summary">
-        <div class="section-header"><div><p class="section-label">Summary</p><h2>Daily summary</h2></div><div class="button-row wrap"><input id="summaryDate" type="date" /><button id="exportCsvButton" class="secondary-button">Export CSV backup</button></div></div>
+        <div class="section-header">
+          <div>
+            <p class="section-label">Summary</p>
+            <h2>Daily summary</h2>
+          </div>
+          <div class="button-row wrap">
+            <input id="summaryDate" type="date" />
+            <button id="exportCsvButton" class="secondary-button">Export CSV backup</button>
+          </div>
+        </div>
         <div id="summaryTable" class="card"></div>
       </section>
 
       <section class="tab-panel" id="tab-templates">
         <div class="grid-two">
-          <div class="card"><h3>Staff</h3><div class="form-row"><input id="newStaffName" placeholder="Staff name" /><button id="addStaffButton" class="primary-button">Add</button></div><div id="staffList" class="list"></div></div>
-          <div class="card"><h3>Job templates</h3><div class="form-row"><input id="newTemplateName" placeholder="Job template" /><button id="addTemplateButton" class="primary-button">Add</button></div><div id="templateList" class="list"></div></div>
+          <div class="card">
+            <h3>Staff</h3>
+            <div class="form-row">
+              <input id="newStaffName" placeholder="Staff name" />
+              <button id="addStaffButton" class="primary-button">Add</button>
+            </div>
+            <div id="staffList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <h3>Job templates</h3>
+            <div class="form-row">
+              <input id="newTemplateName" placeholder="Job template" />
+              <button id="addTemplateButton" class="primary-button">Add</button>
+            </div>
+            <div id="templateList" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-settings">
+        <div class="grid-two">
+          <div class="card">
+            <h3>Business settings</h3>
+            <label>Auto-submit unsubmitted days at
+              <input id="autoSubmitTime" type="time" />
+            </label>
+            <label>Submission email recipient
+              <input id="notificationEmail" type="email" placeholder="email@example.com" />
+            </label>
+            <button id="saveSettingsButton" class="primary-button">Save settings</button>
+            <p id="settingsMessage" class="muted"></p>
+          </div>
+
+          <div class="card">
+            <h3>Change boss password</h3>
+            <label>Current password
+              <input id="oldBossPassword" type="password" />
+            </label>
+            <label>New password
+              <input id="newBossPassword" type="password" />
+            </label>
+            <label>Confirm new password
+              <input id="confirmBossPassword" type="password" />
+            </label>
+            <button id="changePasswordButton" class="primary-button">Change password</button>
+            <p id="passwordMessage" class="muted"></p>
+            <p class="muted">If the boss forgets the password, Emily can reset it in Supabase by editing <strong>businesses → boss_password</strong>. Grim but effective.</p>
+          </div>
         </div>
       </section>
     </section>
+
     <footer>Emily Thomas Engineering</footer>
   </main>
   <script src="../js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/store.js"></script>
   <script src="../js/admin.js"></script>
 </body>

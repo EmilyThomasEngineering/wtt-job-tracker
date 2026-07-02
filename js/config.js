@@ -1,4 +1,4 @@
-const APP_CONFIG = {
+window.APP_CONFIG = {
   bossPassword: "emily888",
   companyName: "Warrnambool Trays & Trailers",
   notificationEmail: "emilythomasmail@gmail.com",
