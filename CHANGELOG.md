@@ -1,6 +1,4 @@
 # Changelog
 
 ## Version 1.0 Work In Progress
-
-- Clean project structure created
-- Home page foundation added
+- Added full frontend structure.

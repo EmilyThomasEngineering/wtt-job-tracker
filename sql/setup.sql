@@ -1,1 +1,7 @@
--- Database setup will be added when Supabase schema is designed.
+-- Supabase schema draft. Do not run until frontend is approved and Supabase keys are added.
+create table if not exists staff (id uuid primary key default gen_random_uuid(), name text not null, active boolean not null default true, created_at timestamptz not null default now());
+create table if not exists job_templates (id uuid primary key default gen_random_uuid(), name text not null, active boolean not null default true, created_at timestamptz not null default now());
+create table if not exists planned_jobs (id uuid primary key default gen_random_uuid(), work_date date not null, staff_id uuid references staff(id), job_number integer not null, name text not null, instructions text, staff_notes text, status text not null default 'not_started', actual_start timestamptz, actual_end timestamptz, submitted_at timestamptz, created_at timestamptz not null default now());
+create table if not exists shifts (id uuid primary key default gen_random_uuid(), work_date date not null, staff_id uuid references staff(id), clock_in timestamptz, clock_out timestamptz, submitted_at timestamptz, created_at timestamptz not null default now());
+create table if not exists breaks (id uuid primary key default gen_random_uuid(), work_date date not null, staff_id uuid references staff(id), started_at timestamptz not null, ended_at timestamptz, created_at timestamptz not null default now());
+create table if not exists job_time_segments (id uuid primary key default gen_random_uuid(), job_id uuid references planned_jobs(id) on delete cascade, started_at timestamptz not null, ended_at timestamptz, created_at timestamptz not null default now());

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff View | WTT Job Tracker</title>
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+  <main class="app-layout">
+    <header class="app-header">
+      <a class="mini-brand" href="../index.html">
+        <img src="../assets/logos/wtt-logo.png" alt="WTT logo" />
+        <div><strong>Staff View</strong><span>Warrnambool Trays & Trailers</span></div>
+      </a>
+      <div class="button-row">
+        <a class="ghost-button" href="../index.html">Back</a>
+        <button id="changeStaffButton" class="ghost-button hidden">Change staff</button>
+      </div>
+    </header>
+    <section id="staffSelectPanel" class="login-panel">
+      <h1>Select your name</h1>
+      <p>Pick yourself before anything else appears. Radical privacy theatre, but useful.</p>
+      <div id="staffButtons" class="staff-button-grid"></div>
+    </section>
+    <section id="staffWorkPanel" class="hidden">
+      <div id="staffStatusBanner" class="status-banner">CLOCKED OUT</div>
+      <div class="card"><div class="section-header"><div><p class="section-label">Current staff</p><h2 id="selectedStaffName"></h2></div><input id="staffDate" type="date" /></div><div class="button-row wrap"><button id="clockInButton" class="primary-button">Clock in</button><button id="clockOutButton" class="secondary-button">Clock out</button><button id="startBreakButton" class="warning-button">Start break</button><button id="endBreakButton" class="secondary-button">End break</button></div></div>
+      <div id="staffJobList" class="stack"></div>
+      <div class="card"><h3>Submit day</h3><p>Review your jobs and notes before submitting. The system cannot yet detect lies, but give it time.</p><button id="submitDayButton" class="primary-button">Submit day</button><p id="submitMessage" class="muted"></p></div>
+    </section>
+    <footer>Emily Thomas Engineering</footer>
+  </main>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/staff.js"></script>
+</body>
+</html>

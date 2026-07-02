@@ -1,3 +1,3 @@
 # Notes
 
-Development notes go here.
+Frontend currently uses localStorage. Supabase connection is next.

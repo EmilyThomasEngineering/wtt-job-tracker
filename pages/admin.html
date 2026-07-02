@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boss View | WTT Job Tracker</title>
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body>
+  <main class="app-layout">
+    <header class="app-header">
+      <a class="mini-brand" href="../index.html">
+        <img src="../assets/logos/wtt-logo.png" alt="WTT logo" />
+        <div><strong>Boss View</strong><span>Warrnambool Trays & Trailers</span></div>
+      </a>
+      <div class="button-row">
+        <a class="ghost-button" href="../index.html">Back</a>
+        <button id="logoutButton" class="ghost-button hidden">Log out</button>
+      </div>
+    </header>
+
+    <section id="loginPanel" class="login-panel">
+      <h1>Boss Login</h1>
+      <p>Enter the boss password to manage the daily job plan.</p>
+      <div class="form-row">
+        <input id="bossPasswordInput" type="password" placeholder="Password" autocomplete="current-password" />
+        <button id="bossLoginButton" class="primary-button">Enter</button>
+      </div>
+      <p id="loginError" class="error-text"></p>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <nav class="tab-bar">
+        <button class="tab-button active" data-tab="plan">Job Plan</button>
+        <button class="tab-button" data-tab="live">Live View</button>
+        <button class="tab-button" data-tab="summary">Summary</button>
+        <button class="tab-button" data-tab="templates">Templates</button>
+      </nav>
+
+      <section class="tab-panel active" id="tab-plan">
+        <div class="section-header"><div><p class="section-label">Job planner</p><h2>Plan selected day</h2></div><input id="planDate" type="date" /></div>
+        <div class="card"><h3>Create job</h3><div class="form-grid"><label>Staff<select id="planStaff"></select></label><label>Job number<input id="planJobNumber" type="number" min="1" value="1" /></label><label>Job / template search<input id="planJobName" list="jobTemplateList" placeholder="Start typing a job..." /><datalist id="jobTemplateList"></datalist></label><label>Specific instructions<input id="planInstructions" placeholder="Optional instructions" /></label></div><button id="addJobButton" class="primary-button">Add job</button></div>
+        <div id="planTable" class="stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-live">
+        <div class="section-header"><div><p class="section-label">Live view</p><h2>Workshop dashboard</h2></div><input id="liveDate" type="date" /></div>
+        <div id="liveStats" class="stats-grid"></div><div id="liveCards" class="stack"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-summary">
+        <div class="section-header"><div><p class="section-label">Summary</p><h2>Daily summary</h2></div><div class="button-row wrap"><input id="summaryDate" type="date" /><button id="exportCsvButton" class="secondary-button">Export CSV backup</button></div></div>
+        <div id="summaryTable" class="card"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-templates">
+        <div class="grid-two">
+          <div class="card"><h3>Staff</h3><div class="form-row"><input id="newStaffName" placeholder="Staff name" /><button id="addStaffButton" class="primary-button">Add</button></div><div id="staffList" class="list"></div></div>
+          <div class="card"><h3>Job templates</h3><div class="form-row"><input id="newTemplateName" placeholder="Job template" /><button id="addTemplateButton" class="primary-button">Add</button></div><div id="templateList" class="list"></div></div>
+        </div>
+      </section>
+    </section>
+    <footer>Emily Thomas Engineering</footer>
+  </main>
+  <script src="../js/config.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>
