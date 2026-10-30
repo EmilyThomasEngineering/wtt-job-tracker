@@ -60,3 +60,8 @@ tr.click-row:hover{filter:brightness(.97)}
 header #logoLogout{display:inline-flex;align-items:center;flex-shrink:0;border-radius:6px;cursor:pointer}
 header #logoLogout:hover{opacity:.85}
 header #logoLogout:focus-visible{outline:2px solid #fff;outline-offset:4px}
+
+/* Footer belongs at the end of the page, not fixed over job sheets */
+.ete-credit{position:static;display:flex;align-items:flex-end;flex-direction:column;gap:5px;width:100%;padding:18px 18px 12px;margin-top:24px;pointer-events:auto}
+body{min-height:100vh;display:flex;flex-direction:column}
+main{width:100%;flex:1 0 auto}
