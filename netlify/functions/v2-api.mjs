@@ -54,7 +54,7 @@ export const handler=async(event)=>{
    const work=await query(client.from('v2_work').select('*').order('started_at',{ascending:false}).limit(1000));
    const clients=await query(client.from('v2_clients').select('id,name').order('name'));
    const allUsers=await query(client.from('v2_users').select('id,name,role,colour,active').order('name'));
-   return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>x.user_id===user.id),users:admin?allUsers:[],clients});
+   return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>assignments.some(a=>a.job_id===x.job_id&&a.user_id===user.id)),users:allUsers.map(({id,name,role,colour,active})=>({id,name,role,colour,active})),clients});
   }
   if(action==='changeOwnPin'){
    const account=await query(client.from('v2_users').select('pin_hash').eq('id',user.id).single());
