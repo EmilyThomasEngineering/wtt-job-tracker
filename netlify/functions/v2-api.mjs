@@ -1,0 +1,99 @@
+import { createClient } from '@supabase/supabase-js';
+import { randomBytes, scryptSync, timingSafeEqual, createHmac } from 'node:crypto';
+const json=(status,data)=>({statusCode:status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'},body:JSON.stringify(data)});
+const db=()=>createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+const hash=p=>{const salt=randomBytes(16).toString('hex');return `${salt}:${scryptSync(String(p),salt,64).toString('hex')}`};
+const verify=(p,h)=>{if(!h)return false;const [salt,digest]=h.split(':');if(!salt||!digest)return false;const a=scryptSync(String(p),salt,64),b=Buffer.from(digest,'hex');return a.length===b.length&&timingSafeEqual(a,b)};
+const sign=(payload)=>{const data=Buffer.from(JSON.stringify(payload)).toString('base64url');return `${data}.${createHmac('sha256',process.env.V2_SESSION_SECRET).update(data).digest('base64url')}`};
+const session=(event)=>{const raw=(event.headers.authorization||event.headers.Authorization||'').replace(/^Bearer /,'');const [data,sig]=raw.split('.');if(!data||!sig)return null;const expected=createHmac('sha256',process.env.V2_SESSION_SECRET).update(data).digest('base64url');const a=Buffer.from(sig),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return null;const obj=JSON.parse(Buffer.from(data,'base64url').toString());return obj.exp>Date.now()?obj:null};
+const fail=e=>{throw new Error(e?.message||'Database operation failed')};
+const query=async(q)=>{const {data,error}=await q;if(error)fail(error);return data};
+const required=(v,max=500)=>{if(typeof v!=='string'||!v.trim()||v.length>max)throw Error('Missing or invalid required field');return v.trim()};
+const pin=p=>{if(!/^\d{6,8}$/.test(String(p)))throw Error('PIN must be 6 to 8 digits');return String(p)};
+const allowed=(role)=>role==='admin';
+export const handler=async(event)=>{
+ if(event.httpMethod!=='POST')return json(405,{error:'POST required'});
+ if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY||!process.env.V2_SESSION_SECRET)return json(503,{error:'Server configuration incomplete'});
+ try{
+  const b=JSON.parse(event.body||'{}'),action=b.action,client=db();let user=null,s=session(event);
+  if(action==='bootstrap'){
+   const users=await query(client.from('v2_users').select('id').limit(1));
+   if(users.length)return json(403,{error:'Setup already completed'});
+   if(!process.env.V2_BOOTSTRAP_SECRET||b.secret!==process.env.V2_BOOTSTRAP_SECRET)return json(403,{error:'Invalid setup code'});
+   const created=await query(client.from('v2_users').insert({name:'Owner',role:'admin',colour:'#64748b',pin_hash:hash(pin(b.pin))}).select('id,name,role').single());
+   return json(200,{ok:true,user:created});
+  }
+  if(action==='recoverOwner'){
+   if(!process.env.V2_BOOTSTRAP_SECRET||b.secret!==process.env.V2_BOOTSTRAP_SECRET)return json(403,{error:'Invalid recovery code'});
+   const owner=await query(client.from('v2_users').select('id').eq('name','Owner').maybeSingle());
+   if(!owner)return json(404,{error:'Owner not configured'});
+   await query(client.from('v2_users').update({pin_hash:hash(pin(b.pin)),failed_attempts:0,locked_until:null}).eq('id',owner.id));
+   return json(200,{ok:true});
+  }
+  if(action==='names')return json(200,{users:await query(client.from('v2_users').select('id,name,role,colour').eq('active',true).order('name'))});
+  if(action==='login'){
+   const found=await query(client.from('v2_users').select('*').eq('id',b.userId).eq('active',true).maybeSingle());
+   if(found?.locked_until&&new Date(found.locked_until).getTime()>Date.now())return json(429,{error:'Too many attempts. Try again in 15 minutes.'});
+   if(!found||!verify(b.pin,found.pin_hash)){
+    if(found){const attempts=(found.failed_attempts||0)+1;await query(client.from('v2_users').update({failed_attempts:attempts>=5?0:attempts,locked_until:attempts>=5?new Date(Date.now()+15*60*1000).toISOString():null}).eq('id',found.id));}
+    return json(401,{error:'Incorrect PIN'});
+   }
+   await query(client.from('v2_users').update({failed_attempts:0,locked_until:null}).eq('id',found.id));
+   return json(200,{token:sign({id:found.id,exp:Date.now()+8*60*60*1000}),user:{id:found.id,name:found.name,role:found.role}});
+  }
+  if(!s)return json(401,{error:'Please log in again'});
+  user=await query(client.from('v2_users').select('id,name,role,active').eq('id',s.id).maybeSingle());
+  if(!user?.active)return json(401,{error:'Account inactive'});
+  const admin=allowed(user.role);
+  if(action==='data'){
+   const jobs=await query(client.from('v2_jobs').select('*').order('created_at',{ascending:false}).limit(500));
+   const assignments=await query(client.from('v2_assignments').select('*'));
+   const shifts=await query(client.from('v2_shifts').select('*').order('started_at',{ascending:false}).limit(300));
+   const breaks=await query(client.from('v2_breaks').select('*').order('started_at',{ascending:false}).limit(300));
+   const work=await query(client.from('v2_work').select('*').order('started_at',{ascending:false}).limit(500));
+   return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>x.user_id===user.id),users:admin?await query(client.from('v2_users').select('id,name,role,colour,active').order('name')):[]});
+  }
+  if(action==='saveUser'){
+   if(!admin)return json(403,{error:'Admin only'});
+   if(b.name==='Owner'||(b.id&&b.id=== (await query(client.from('v2_users').select('id').eq('name','Owner').maybeSingle()))?.id))return json(403,{error:'Owner account can only be reset with the private recovery code'});
+   const values={name:required(b.name,80),role:['admin','worker'].includes(b.role)?b.role:'worker',colour:/^#[0-9a-fA-F]{6}$/.test(b.colour)?b.colour:'#64748b',active:b.active!==false};
+   if(b.pin)values.pin_hash=hash(pin(b.pin));
+   if(b.id){await query(client.from('v2_users').update(values).eq('id',b.id));}else{if(!values.pin_hash)throw Error('PIN required');await query(client.from('v2_users').insert(values));}
+   return json(200,{ok:true});
+  }
+  if(action==='saveJob'){
+   if(!admin)return json(403,{error:'Admin only'});
+   const values={job_number:required(b.job_number,80),client:required(b.client,200),contact:String(b.contact||'').slice(0,300),rego_vin:String(b.rego_vin||'').slice(0,120),start_date:b.start_date||null,completion_date:b.completion_date||null,description:String(b.description||'').slice(0,10000),instructions:String(b.instructions||'').slice(0,10000),status:['open','in_progress','on_hold','completed'].includes(b.status)?b.status:'open',updated_at:new Date().toISOString()};
+   let job;if(b.id){job=await query(client.from('v2_jobs').update(values).eq('id',b.id).select().single());}else{job=await query(client.from('v2_jobs').insert({...values,created_by:user.id}).select().single());}
+   await query(client.from('v2_assignments').delete().eq('job_id',job.id));
+   const ids=[...new Set((b.assignees||[]).filter(x=>typeof x==='string'))];
+   if(ids.length)await query(client.from('v2_assignments').insert(ids.map(id=>({job_id:job.id,user_id:id}))));
+   return json(200,{ok:true});
+  }
+  if(action==='clockIn'){
+   const open=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(open.length)throw Error('Already clocked in');
+   await query(client.from('v2_shifts').insert({user_id:user.id}));return json(200,{ok:true});
+  }
+  if(action==='clockOut'){
+   const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).order('started_at',{ascending:false}).limit(1));if(!shift.length)throw Error('Not clocked in');
+   const now=new Date().toISOString();await query(client.from('v2_breaks').update({ended_at:now}).eq('shift_id',shift[0].id).is('ended_at',null));await query(client.from('v2_work').update({ended_at:now}).eq('user_id',user.id).is('ended_at',null));await query(client.from('v2_shifts').update({ended_at:now}).eq('id',shift[0].id));return json(200,{ok:true});
+  }
+  if(action==='breakStart'||action==='breakEnd'){
+   const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!shift.length)throw Error('Clock in first');
+   const active=await query(client.from('v2_breaks').select('id').eq('shift_id',shift[0].id).is('ended_at',null).limit(1));
+   if(action==='breakStart'){if(active.length)throw Error('Already on break');await query(client.from('v2_work').update({ended_at:new Date().toISOString()}).eq('user_id',user.id).is('ended_at',null));await query(client.from('v2_breaks').insert({shift_id:shift[0].id}));}
+   else{if(!active.length)throw Error('Not on break');await query(client.from('v2_breaks').update({ended_at:new Date().toISOString()}).eq('id',active[0].id));}return json(200,{ok:true});
+  }
+  if(action==='workStart'){
+   const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!shift.length)throw Error('Clock in first');
+   const breaks=await query(client.from('v2_breaks').select('id').eq('shift_id',shift[0].id).is('ended_at',null).limit(1));if(breaks.length)throw Error('End break first');
+   const assigned=await query(client.from('v2_assignments').select('job_id').eq('job_id',b.jobId).eq('user_id',user.id).limit(1));if(!assigned.length&&!admin)return json(403,{error:'Job not assigned to you'});
+   await query(client.from('v2_work').update({ended_at:new Date().toISOString()}).eq('user_id',user.id).is('ended_at',null));await query(client.from('v2_work').insert({job_id:b.jobId,user_id:user.id}));return json(200,{ok:true});
+  }
+  if(action==='workStop'){
+   const current=await query(client.from('v2_work').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!current.length)throw Error('No active job');
+   await query(client.from('v2_work').update({ended_at:new Date().toISOString(),notes:String(b.notes||'').slice(0,2000)}).eq('id',current[0].id));return json(200,{ok:true});
+  }
+  return json(400,{error:'Unknown action'});
+ }catch(e){return json(400,{error:e.message||'Request failed'});}
+};

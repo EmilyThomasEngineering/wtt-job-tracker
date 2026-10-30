@@ -1,5 +1,7 @@
 [functions]
   directory = "netlify/functions"
 
-[functions."auto-submit"]
-  schedule = "*/15 * * * *"
+[[redirects]]
+  from = "/api/v2"
+  to = "/.netlify/functions/v2-api"
+  status = 200

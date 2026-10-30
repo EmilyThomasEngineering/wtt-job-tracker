@@ -1,0 +1,10 @@
+Delete these OLD files from your existing project when installing V2:
+js/admin.js
+js/staff.js
+js/store.js
+js/app.js
+js/config.js
+netlify/functions/auto-submit.mjs
+netlify/functions/send-submission-email.mjs
+
+These files are deliberately absent from the V2 ZIP and should not remain in the live deployment.
