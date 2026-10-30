@@ -30,7 +30,8 @@ export const handler=async(event)=>{
    await query(client.from('v2_users').update({pin_hash:hash(pin(b.pin)),failed_attempts:0,locked_until:null}).eq('id',owner.id));
    return json(200,{ok:true});
   }
-  if(action==='names')return json(200,{users:await query(client.from('v2_users').select('id,name,role,colour').eq('active',true).order('name'))});
+  if(action==='names')return json(200,{users:(await query(client.from('v2_users').select('id,name,role,colour').eq('active',true).order('name'))).filter(x=>x.name!=='Owner')});
+  if(action==='ownerName')return json(200,{user:await query(client.from('v2_users').select('id,name,role,colour').eq('name','Owner').maybeSingle())});
   if(action==='login'){
    const found=await query(client.from('v2_users').select('*').eq('id',b.userId).eq('active',true).maybeSingle());
    if(found?.locked_until&&new Date(found.locked_until).getTime()>Date.now())return json(429,{error:'Too many attempts. Try again in 15 minutes.'});
@@ -50,8 +51,10 @@ export const handler=async(event)=>{
    const assignments=await query(client.from('v2_assignments').select('*'));
    const shifts=await query(client.from('v2_shifts').select('*').order('started_at',{ascending:false}).limit(300));
    const breaks=await query(client.from('v2_breaks').select('*').order('started_at',{ascending:false}).limit(300));
-   const work=await query(client.from('v2_work').select('*').order('started_at',{ascending:false}).limit(500));
-   return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>x.user_id===user.id),users:admin?await query(client.from('v2_users').select('id,name,role,colour,active').order('name')):[]});
+   const work=await query(client.from('v2_work').select('*').order('started_at',{ascending:false}).limit(1000));
+   const clients=await query(client.from('v2_clients').select('id,name').order('name'));
+   const allUsers=await query(client.from('v2_users').select('id,name,role,colour,active').order('name'));
+   return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>x.user_id===user.id),users:admin?allUsers:[],clients});
   }
   if(action==='saveUser'){
    if(!admin)return json(403,{error:'Admin only'});
@@ -61,10 +64,36 @@ export const handler=async(event)=>{
    if(b.id){await query(client.from('v2_users').update(values).eq('id',b.id));}else{if(!values.pin_hash)throw Error('PIN required');await query(client.from('v2_users').insert(values));}
    return json(200,{ok:true});
   }
+  if(action==='setJobStatus'){
+   const j=await query(client.from('v2_jobs').select('id,status').eq('id',b.jobId).single());
+   const assigned=await query(client.from('v2_assignments').select('user_id').eq('job_id',j.id).eq('user_id',user.id).limit(1));
+   if(!admin&&!assigned.length)return json(403,{error:'Not assigned to this job'});
+   const status=b.status;
+   if(!['open','in_progress','on_hold','completed'].includes(status))throw Error('Invalid status');
+   if(j.status==='completed'&&status!=='completed'&&!admin)return json(403,{error:'Only admins can reopen jobs'});
+   if(status==='completed'){
+     const active=await query(client.from('v2_work').select('id').eq('job_id',j.id).is('ended_at',null).limit(1));
+     if(active.length)throw Error('Stop all active work on this job before completing it');
+   }
+   await query(client.from('v2_jobs').update({status,hold_reason:status==='on_hold'?required(b.reason,250):null,completed_at:status==='completed'?new Date().toISOString():null,completed_by:status==='completed'?user.id:null,updated_at:new Date().toISOString()}).eq('id',j.id));
+   return json(200,{ok:true});
+  }
   if(action==='saveJob'){
    if(!admin)return json(403,{error:'Admin only'});
-   const values={job_number:required(b.job_number,80),client:required(b.client,200),contact:String(b.contact||'').slice(0,300),rego_vin:String(b.rego_vin||'').slice(0,120),start_date:b.start_date||null,completion_date:b.completion_date||null,description:String(b.description||'').slice(0,10000),instructions:String(b.instructions||'').slice(0,10000),status:['open','in_progress','on_hold','completed'].includes(b.status)?b.status:'open',updated_at:new Date().toISOString()};
-   let job;if(b.id){job=await query(client.from('v2_jobs').update(values).eq('id',b.id).select().single());}else{job=await query(client.from('v2_jobs').insert({...values,created_by:user.id}).select().single());}
+   const clientName=required(b.client,200);
+   const contactName=required(b.contact_name,200);
+   const startDate=required(b.start_date,20),dueDate=required(b.completion_date,20);
+   const description=required(b.description,10000);
+   const existingClient=await query(client.from('v2_clients').select('id').ilike('name',clientName).limit(1));
+   const clientRow=existingClient[0]||await query(client.from('v2_clients').insert({name:clientName}).select('id').single());
+   const status=['open','in_progress','on_hold','completed'].includes(b.status)?b.status:'open';
+   const values={client:clientName,client_id:clientRow.id,contact_name:contactName,contact_phone:String(b.contact_phone||'').slice(0,100),contact_email:String(b.contact_email||'').slice(0,200),rego_vin:String(b.rego_vin||'').slice(0,120),start_date:startDate,completion_date:dueDate,description,instructions:String(b.instructions||'').slice(0,10000),status,hold_reason:status==='on_hold'?String(b.hold_reason||'').slice(0,250):null,updated_at:new Date().toISOString()};
+   if(b.id){
+     const previous=await query(client.from('v2_jobs').select('status,completed_at,completed_by').eq('id',b.id).single());
+     if(previous.status==='completed'&&status!=='completed'){values.completed_at=null;values.completed_by=null;}
+     else if(previous.status!=='completed'&&status==='completed'){values.completed_at=new Date().toISOString();values.completed_by=user.id;}
+   }
+   let job;if(b.id){job=await query(client.from('v2_jobs').update(values).eq('id',b.id).select().single());}else{const number=await query(client.rpc('v2_next_job_number'));job=await query(client.from('v2_jobs').insert({...values,job_number:String(number),created_by:user.id,...(status==='completed'?{completed_at:new Date().toISOString(),completed_by:user.id}:{})}).select().single());}
    await query(client.from('v2_assignments').delete().eq('job_id',job.id));
    const ids=[...new Set((b.assignees||[]).filter(x=>typeof x==='string'))];
    if(ids.length)await query(client.from('v2_assignments').insert(ids.map(id=>({job_id:job.id,user_id:id}))));
@@ -88,6 +117,8 @@ export const handler=async(event)=>{
    const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!shift.length)throw Error('Clock in first');
    const breaks=await query(client.from('v2_breaks').select('id').eq('shift_id',shift[0].id).is('ended_at',null).limit(1));if(breaks.length)throw Error('End break first');
    const assigned=await query(client.from('v2_assignments').select('job_id').eq('job_id',b.jobId).eq('user_id',user.id).limit(1));if(!assigned.length&&!admin)return json(403,{error:'Job not assigned to you'});
+   const target=await query(client.from('v2_jobs').select('status').eq('id',b.jobId).single());
+   if(target.status==='completed')throw Error('Job is completed. Ask an admin to reopen it');
    await query(client.from('v2_work').update({ended_at:new Date().toISOString()}).eq('user_id',user.id).is('ended_at',null));await query(client.from('v2_work').insert({job_id:b.jobId,user_id:user.id}));return json(200,{ok:true});
   }
   if(action==='workStop'){
