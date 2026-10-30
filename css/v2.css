@@ -47,3 +47,8 @@ tr.click-row:hover{filter:brightness(.97)}
 
 /* Visible staff action affordance, install link and unobtrusive credit */
 .live-staff-detail summary strong small{font-size:.72rem;font-weight:650;color:#16516a;margin-left:8px;text-decoration:underline}.live-staff-detail[open] summary strong small{color:#294d58}.live-staff-detail summary:hover{outline:2px solid #0b94b2}.live-staff-detail summary{align-items:center}.install-panel{margin:22px 0 12px}.install-panel button{background:#e3edf1;color:#17546b;border:1px solid #a4c4d1}.install-panel p{font-size:.86rem;max-width:600px;color:#4b5c66}.ete-credit{position:fixed;bottom:5px;right:8px;font-size:9px;color:#007c9e;opacity:.8;pointer-events:none;z-index:4}body{padding-bottom:22px}
+
+/* Footer feedback link */
+.ete-credit{display:flex;flex-direction:column;align-items:flex-end;gap:3px;pointer-events:auto}
+.ete-credit a{font-size:11px;color:#007c9e;text-decoration:underline;font-weight:600}
+.ete-credit a:hover{color:#16485f}
