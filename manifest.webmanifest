@@ -1,0 +1,17 @@
+{
+  "name": "WTT Job Tracker",
+  "short_name": "WTT Tracker",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f8",
+  "theme_color": "#162d3a",
+  "icons": [
+    {
+      "src": "/assets/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
