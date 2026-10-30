@@ -21,3 +21,14 @@ tr.click-row:hover{filter:brightness(.97)}
 .clock-grid>.panel:nth-child(2){grid-column:1}.clock-grid>#livePanel{grid-column:2;grid-row:1 / span 2}
 #currentStatus{font-size:1.12rem;font-weight:800;border-left:6px solid currentColor}
 @media(max-width:850px){.clock-grid{display:block}}
+
+/* Compact live panel beside shift, full-width current job below */
+.clock-grid{grid-template-columns:minmax(0,1fr) minmax(260px,1fr);align-items:start}
+.clock-grid>.shift-panel{grid-column:1;grid-row:1}
+.clock-grid>#livePanel{grid-column:2;grid-row:1}
+.clock-grid>.current-job-panel{grid-column:1 / -1;grid-row:2}
+#livePanel{padding:14px 16px;margin:14px 0}
+#livePanel h3{margin:4px 0 10px;font-size:1.05rem}
+#livePanel .live-row{padding:7px 11px;margin:5px 0;font-size:.91rem;border-radius:7px;align-items:center}
+#livePanel .live-row span{text-align:right}
+@media(max-width:850px){.clock-grid{display:flex;flex-direction:column;gap:0}.clock-grid>.panel{width:100%}}
