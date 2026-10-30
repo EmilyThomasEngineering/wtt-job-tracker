@@ -42,3 +42,5 @@ tr.click-row:hover{filter:brightness(.97)}
 /* Primary navigation stands out; settings stays understated */
 .bar nav button[data-tab="jobs"],.bar nav button[data-tab="clock"]{background:#16485f;color:#fff;font-weight:750}
 .bar nav button.settings-nav{background:#e1e5e8;color:#37434a;font-weight:500;border:1px solid #c8d0d5}
+
+.live-staff-detail{margin:5px 0}.live-staff-detail summary{cursor:pointer;list-style:revert}.live-staff-detail summary::marker{color:#344b58}.live-controls{padding:8px 12px 12px;background:#f2f5f7;border-radius:0 0 8px 8px}.live-controls select{margin:4px 0;max-width:100%}.live-staff-detail[open] summary{border-radius:8px 8px 0 0}
