@@ -75,7 +75,7 @@ export const handler=async(event)=>{
      const active=await query(client.from('v2_work').select('id').eq('job_id',j.id).is('ended_at',null).limit(1));
      if(active.length)throw Error('Stop all active work on this job before completing it');
    }
-   await query(client.from('v2_jobs').update({status,hold_reason:status==='on_hold'?required(b.reason,250):null,completed_at:status==='completed'?new Date().toISOString():null,completed_by:status==='completed'?user.id:null,updated_at:new Date().toISOString()}).eq('id',j.id));
+   await query(client.from('v2_jobs').update({status,hold_reason:null,completed_at:status==='completed'?new Date().toISOString():null,completed_by:status==='completed'?user.id:null,updated_at:new Date().toISOString()}).eq('id',j.id));
    return json(200,{ok:true});
   }
   if(action==='saveJob'){
@@ -85,9 +85,9 @@ export const handler=async(event)=>{
    const startDate=required(b.start_date,20),dueDate=required(b.completion_date,20);
    const description=required(b.description,10000);
    const existingClient=await query(client.from('v2_clients').select('id').ilike('name',clientName).limit(1));
-   const clientRow=existingClient[0]||await query(client.from('v2_clients').insert({name:clientName}).select('id').single());
+   let clientRow=existingClient[0];if(!clientRow){const inserted=await client.from('v2_clients').upsert({name:clientName},{onConflict:'name'}).select('id').single();if(inserted.error)fail(inserted.error);clientRow=inserted.data;}
    const status=['open','in_progress','on_hold','completed'].includes(b.status)?b.status:'open';
-   const values={client:clientName,client_id:clientRow.id,contact_name:contactName,contact_phone:String(b.contact_phone||'').slice(0,100),contact_email:String(b.contact_email||'').slice(0,200),rego_vin:String(b.rego_vin||'').slice(0,120),start_date:startDate,completion_date:dueDate,description,instructions:String(b.instructions||'').slice(0,10000),status,hold_reason:status==='on_hold'?String(b.hold_reason||'').slice(0,250):null,updated_at:new Date().toISOString()};
+   const values={client:clientName,client_id:clientRow.id,contact_name:contactName,contact_phone:String(b.contact_phone||'').slice(0,100),contact_email:String(b.contact_email||'').slice(0,200),rego_vin:String(b.rego_vin||'').slice(0,120),start_date:startDate,completion_date:dueDate,description,instructions:String(b.instructions||'').slice(0,10000),status,hold_reason:null,updated_at:new Date().toISOString()};
    if(b.id){
      const previous=await query(client.from('v2_jobs').select('status,completed_at,completed_by').eq('id',b.id).single());
      if(previous.status==='completed'&&status!=='completed'){values.completed_at=null;values.completed_by=null;}
@@ -114,7 +114,7 @@ export const handler=async(event)=>{
    else{if(!active.length)throw Error('Not on break');await query(client.from('v2_breaks').update({ended_at:new Date().toISOString()}).eq('id',active[0].id));}return json(200,{ok:true});
   }
   if(action==='workStart'){
-   const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!shift.length)throw Error('Clock in first');
+   const shift=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(!shift.length){await query(client.from('v2_shifts').insert({user_id:user.id}));shift.push(...await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).order('started_at',{ascending:false}).limit(1)));}
    const breaks=await query(client.from('v2_breaks').select('id').eq('shift_id',shift[0].id).is('ended_at',null).limit(1));if(breaks.length)throw Error('End break first');
    const assigned=await query(client.from('v2_assignments').select('job_id').eq('job_id',b.jobId).eq('user_id',user.id).limit(1));if(!assigned.length&&!admin)return json(403,{error:'Job not assigned to you'});
    const target=await query(client.from('v2_jobs').select('status').eq('id',b.jobId).single());
