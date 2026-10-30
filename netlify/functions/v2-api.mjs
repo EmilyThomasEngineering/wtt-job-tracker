@@ -62,6 +62,14 @@ export const handler=async(event)=>{
    await query(client.from('v2_users').update({pin_hash:hash(pin(b.newPin)),failed_attempts:0,locked_until:null}).eq('id',user.id));
    return json(200,{ok:true});
   }
+  if(action==='ownerResetPin'){
+   if(user.name!=='Owner')return json(403,{error:'Only Owner can reset another user PIN'});
+   const target=await query(client.from('v2_users').select('id,name').eq('id',b.userId).maybeSingle());
+   if(!target)return json(404,{error:'User not found'});
+   if(target.name==='Owner')return json(403,{error:'Change your own PIN using Change my PIN'});
+   await query(client.from('v2_users').update({pin_hash:hash(pin(b.newPin)),failed_attempts:0,locked_until:null}).eq('id',target.id));
+   return json(200,{ok:true});
+  }
   if(action==='saveUser'){
    if(!admin)return json(403,{error:'Admin only'});
    if(b.name==='Owner'||(b.id&&b.id=== (await query(client.from('v2_users').select('id').eq('name','Owner').maybeSingle()))?.id))return json(403,{error:'Owner account can only be reset with the private recovery code'});
