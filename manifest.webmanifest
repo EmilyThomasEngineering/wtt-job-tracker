@@ -1,6 +1,6 @@
 {
-  "name": "WTT Job Tracker",
-  "short_name": "WTT Tracker",
+  "name": "WTT Jobs",
+  "short_name": "WTT Jobs",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
