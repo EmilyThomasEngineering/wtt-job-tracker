@@ -9,7 +9,7 @@ const session=(event)=>{const raw=(event.headers.authorization||event.headers.Au
 const fail=e=>{throw new Error(e?.message||'Database operation failed')};
 const query=async(q)=>{const {data,error}=await q;if(error)fail(error);return data};
 const required=(v,max=500)=>{if(typeof v!=='string'||!v.trim()||v.length>max)throw Error('Missing or invalid required field');return v.trim()};
-const pin=p=>{if(!/^\d{6,8}$/.test(String(p)))throw Error('PIN must be 6 to 8 digits');return String(p)};
+const pin=p=>{if(!/^\d{4}$/.test(String(p)))throw Error('PIN must be exactly 4 digits');return String(p)};
 const allowed=(role)=>role==='admin';
 export const handler=async(event)=>{
  if(event.httpMethod!=='POST')return json(405,{error:'POST required'});
