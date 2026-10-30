@@ -56,11 +56,18 @@ export const handler=async(event)=>{
    const allUsers=await query(client.from('v2_users').select('id,name,role,colour,active').order('name'));
    return json(200,{jobs:admin?jobs:jobs.filter(j=>assignments.some(a=>a.job_id===j.id&&a.user_id===user.id)),assignments:admin?assignments:assignments.filter(a=>a.user_id===user.id),shifts:admin?shifts:shifts.filter(x=>x.user_id===user.id),breaks:admin?breaks:breaks.filter(x=>shifts.some(y=>y.id===x.shift_id&&y.user_id===user.id)),work:admin?work:work.filter(x=>x.user_id===user.id),users:admin?allUsers:[],clients});
   }
+  if(action==='changeOwnPin'){
+   const account=await query(client.from('v2_users').select('pin_hash').eq('id',user.id).single());
+   if(!verify(b.currentPin,account.pin_hash))return json(403,{error:'Current PIN is incorrect'});
+   await query(client.from('v2_users').update({pin_hash:hash(pin(b.newPin)),failed_attempts:0,locked_until:null}).eq('id',user.id));
+   return json(200,{ok:true});
+  }
   if(action==='saveUser'){
    if(!admin)return json(403,{error:'Admin only'});
    if(b.name==='Owner'||(b.id&&b.id=== (await query(client.from('v2_users').select('id').eq('name','Owner').maybeSingle()))?.id))return json(403,{error:'Owner account can only be reset with the private recovery code'});
    const values={name:required(b.name,80),role:['admin','worker'].includes(b.role)?b.role:'worker',colour:/^#[0-9a-fA-F]{6}$/.test(b.colour)?b.colour:'#64748b',active:b.active!==false};
-   if(b.pin)values.pin_hash=hash(pin(b.pin));
+   if(b.id&&b.pin)return json(403,{error:'You can only change your own PIN using your current PIN'});
+   if(!b.id&&b.pin)values.pin_hash=hash(pin(b.pin));
    if(b.id){await query(client.from('v2_users').update(values).eq('id',b.id));}else{if(!values.pin_hash)throw Error('PIN required');await query(client.from('v2_users').insert(values));}
    return json(200,{ok:true});
   }
