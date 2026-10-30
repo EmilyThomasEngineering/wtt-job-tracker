@@ -114,6 +114,40 @@ export const handler=async(event)=>{
    if(ids.length)await query(client.from('v2_assignments').insert(ids.map(id=>({job_id:job.id,user_id:id}))));
    return json(200,{ok:true});
   }
+  if(action==='adminClock'){
+   if(!admin)return json(403,{error:'Admin only'});
+   const target=await query(client.from('v2_users').select('id,active,name').eq('id',b.userId).maybeSingle());
+   if(!target||!target.active||target.name==='Owner')return json(400,{error:'Invalid staff member'});
+   const op=b.operation,now=new Date().toISOString(),uid=target.id;
+   const shifts=await query(client.from('v2_shifts').select('id').eq('user_id',uid).is('ended_at',null).order('started_at',{ascending:false}).limit(1));
+   const shift=shifts[0];
+   const breaks=shift?await query(client.from('v2_breaks').select('id').eq('shift_id',shift.id).is('ended_at',null).limit(1):[];
+   if(op==='clockIn'){
+     if(shift)throw Error('Already clocked in');
+     await query(client.from('v2_shifts').insert({user_id:uid}));
+   }else if(op==='clockOut'){
+     if(!shift)throw Error('Not clocked in');
+     await query(client.from('v2_breaks').update({ended_at:now}).eq('shift_id',shift.id).is('ended_at',null));
+     await query(client.from('v2_work').update({ended_at:now}).eq('user_id',uid).is('ended_at',null));
+     await query(client.from('v2_shifts').update({ended_at:now}).eq('id',shift.id));
+   }else if(op==='breakStart'){
+     if(!shift)throw Error('Clock in first');
+     if(breaks.length)throw Error('Already on break');
+     await query(client.from('v2_work').update({ended_at:now}).eq('user_id',uid).is('ended_at',null));
+     await query(client.from('v2_breaks').insert({shift_id:shift.id}));
+   }else if(op==='breakEnd'){
+     if(!breaks.length)throw Error('Not on break');
+     await query(client.from('v2_breaks').update({ended_at:now}).eq('id',breaks[0].id));
+   }else if(op==='job'){
+     const job=await query(client.from('v2_jobs').select('id,status').eq('id',b.jobId).maybeSingle());
+     if(!job||job.status==='completed')throw Error('Job unavailable or completed');
+     if(!shift)await query(client.from('v2_shifts').insert({user_id:uid}));
+     if(breaks.length)await query(client.from('v2_breaks').update({ended_at:now}).eq('id',breaks[0].id));
+     await query(client.from('v2_work').update({ended_at:now}).eq('user_id',uid).is('ended_at',null));
+     await query(client.from('v2_work').insert({job_id:job.id,user_id:uid}));
+   }else throw Error('Invalid clocking action');
+   return json(200,{ok:true});
+  }
   if(action==='clockIn'){
    const open=await query(client.from('v2_shifts').select('id').eq('user_id',user.id).is('ended_at',null).limit(1));if(open.length)throw Error('Already clocked in');
    await query(client.from('v2_shifts').insert({user_id:user.id}));return json(200,{ok:true});
