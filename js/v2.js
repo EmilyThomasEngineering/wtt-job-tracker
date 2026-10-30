@@ -7,7 +7,7 @@ async function names(){const d=await api('names');people=d.users;$('people').inn
 function pick(id){selected=people.find(u=>u.id===id);$('pinTitle').textContent='PIN for '+selected.name;$('pin').value='';$('pinBox').hidden=false;$('pin').focus()}
 async function login(){const d=await api('login',{userId:selected.id,pin:$('pin').value});token=d.token;me=d.user;sessionStorage.setItem('wtt_v2_token',token);$('login').hidden=true;$('app').hidden=false;$('logout').hidden=false;$('adminShortcut').hidden=true;$('welcome').textContent='Signed in: '+me.name;document.querySelectorAll('.adminOnly').forEach(e=>e.hidden=me.role!=='admin');await refresh();show('jobs');}
 async function refresh(){data=await api('data');renderJobs();renderTime();if(me.role==='admin')renderUsers();if(me.name==='Owner'){$('ownerResetPanel').hidden=false;$('ownerResetUser').innerHTML=data.users.filter(u=>u.name!=='Owner').map(u=>`<option value="${esc(u.id)}">${esc(u.name)}</option>`).join('');}else $('ownerResetPanel').hidden=true;}
-function show(name){if(['admin'].includes(name)&&me.role!=='admin')return;tab=name;['jobs','clock','admin','pin'].forEach(t=>$(t+'Tab').hidden=t!==name);}
+function show(name){tab=name;['jobs','clock','admin'].forEach(t=>$(t+'Tab').hidden=t!==name);}
 const dateFmt=s=>s?new Date(s+'T12:00:00').toLocaleDateString('en-AU'):'—';
 const stamp=s=>s?new Date(s).toLocaleString('en-AU',{dateStyle:'short',timeStyle:'short'}):'Still working';
 const jobSort=(a,b)=>(a.completion_date||'9999').localeCompare(b.completion_date||'9999');
