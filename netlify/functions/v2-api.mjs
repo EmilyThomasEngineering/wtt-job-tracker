@@ -121,7 +121,7 @@ export const handler=async(event)=>{
    const op=b.operation,now=new Date().toISOString(),uid=target.id;
    const shifts=await query(client.from('v2_shifts').select('id').eq('user_id',uid).is('ended_at',null).order('started_at',{ascending:false}).limit(1));
    const shift=shifts[0];
-   const breaks=shift?await query(client.from('v2_breaks').select('id').eq('shift_id',shift.id).is('ended_at',null).limit(1):[];
+   const breaks=shift?await query(client.from('v2_breaks').select('id').eq('shift_id',shift.id).is('ended_at',null).limit(1)):[];
    if(op==='clockIn'){
      if(shift)throw Error('Already clocked in');
      await query(client.from('v2_shifts').insert({user_id:uid}));
